@@ -170,6 +170,17 @@ jobs:
           echo "base_rc=${base_rc}" >> "$GITHUB_OUTPUT"
           echo "ae_rc=${ae_rc}" >> "$GITHUB_OUTPUT"
 
+      - name: Run Forge GameTests (AE nightly rollout)
+        id: forge_run
+        run: |
+          mkdir -p ci-reports/nightly
+          set +e
+          timeout 25m ./gradlew --no-daemon --configure-on-demand :ext-ae:forge-1.20.1:runGameTestServer --stacktrace > ci-reports/nightly/ext-ae-forge-gametest.log 2>&1
+          forge_rc=$?
+          set -e
+          echo "forge_rc=${forge_rc}" >> "$GITHUB_STEP_SUMMARY"
+          echo "forge_rc=${forge_rc}" >> "$GITHUB_OUTPUT"
+
       - name: Collect and enforce nightly policy
         run: |
           set +e
@@ -179,6 +190,9 @@ jobs:
             --junit-glob "**/build/test-results/test/*.xml" \
             --fabric-gametest-glob "base/fabric-1.20.1/build/reports/gametest/runGametest.xml" \
             --fabric-gametest-glob "ext-ae/fabric-1.20.1/build/reports/gametest/runGametest.xml" \
+            --forge-report-glob "ext-ae/forge-1.20.1/build/reports/**/*.xml" \
+            --forge-log-glob "ci-reports/nightly/ext-ae-forge-gametest.log" \
+            --forge-exit-code "${{ steps.forge_run.outputs.forge_rc }}" \
             --summary-json "ci-reports/nightly/summary.json"
           policy_rc=$?
           set -e
@@ -199,8 +213,10 @@ jobs:
             ci-reports/nightly/summary.json
             ci-reports/nightly/base-fabric-gametest.log
             ci-reports/nightly/ext-ae-fabric-gametest.log
+            ci-reports/nightly/ext-ae-forge-gametest.log
             base/fabric-1.20.1/build/reports/gametest/runGametest.xml
             ext-ae/fabric-1.20.1/build/reports/gametest/runGametest.xml
+            ext-ae/forge-1.20.1/build/reports/**/*.xml
             build/reports/jacoco/jacocoUnitTestReport/**
             **/build/reports/jacoco/test/**
             **/build/test-results/test/*.xml
