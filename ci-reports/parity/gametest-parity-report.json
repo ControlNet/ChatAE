@@ -166,6 +166,16 @@
       },
       {
         "forge_batch": "mineagentae",
+        "forge_scenario_id": "AeBoundTerminalApprovalBindingUnavailableGameTest::aeBoundTerminalApprovalFailsWhenAeBindingUnavailable",
+        "mapped_forge_class": null,
+        "name_similarity": 1.0,
+        "wrapper_batch": "ae_smoke_binding_unavailable",
+        "wrapper_id": "MineAgentAeFabricGameTestEntrypoint::aeBoundTerminalApprovalFailsWhenAeBindingUnavailable",
+        "wrapper_status": "passed",
+        "wrapper_testcase": "mineagentaefabricgametestentrypoint.aeboundterminalapprovalfailswhenaebindingunavailable"
+      },
+      {
+        "forge_batch": "mineagentae",
         "forge_scenario_id": "AeTerminalTeardownLiveJobsGameTest::aeTerminalTeardownClearsLiveJobs",
         "mapped_forge_class": null,
         "name_similarity": 1.0,
@@ -186,6 +196,16 @@
       },
       {
         "forge_batch": "mineagentae",
+        "forge_scenario_id": "AeBindingReresolutionGameTest::aeBindingBasedContextReresolutionSucceedsUntilBindingBecomesStale",
+        "mapped_forge_class": null,
+        "name_similarity": 1.0,
+        "wrapper_batch": "ae_smoke_binding_reresolution",
+        "wrapper_id": "MineAgentAeFabricGameTestEntrypoint::aeBindingBasedContextReresolutionSucceedsUntilBindingBecomesStale",
+        "wrapper_status": "passed",
+        "wrapper_testcase": "mineagentaefabricgametestentrypoint.aebindingbasedcontextreresolutionsucceedsuntilbindingbecomesstale"
+      },
+      {
+        "forge_batch": "mineagentae",
         "forge_scenario_id": "AeCpuUnavailableGameTest::aeCpuTargetedUnavailableCpuBranch",
         "mapped_forge_class": null,
         "name_similarity": 1.0,
@@ -193,6 +213,26 @@
         "wrapper_id": "MineAgentAeFabricGameTestEntrypoint::aeCpuTargetedUnavailableCpuBranch",
         "wrapper_status": "passed",
         "wrapper_testcase": "mineagentaefabricgametestentrypoint.aecputargetedunavailablecpubranch"
+      },
+      {
+        "forge_batch": "mineagentae",
+        "forge_scenario_id": "AeTerminalRemovalInvalidationGameTest::aeTerminalRemovalInvalidatesMenuContextAndClearsJobs",
+        "mapped_forge_class": null,
+        "name_similarity": 1.0,
+        "wrapper_batch": "ae_smoke_terminal_removal",
+        "wrapper_id": "MineAgentAeFabricGameTestEntrypoint::aeTerminalRemovalInvalidatesMenuContextAndClearsJobs",
+        "wrapper_status": "passed",
+        "wrapper_testcase": "mineagentaefabricgametestentrypoint.aeterminalremovalinvalidatesmenucontextandclearsjobs"
+      },
+      {
+        "forge_batch": "mineagentae",
+        "forge_scenario_id": "AeCancelClearIsolationGameTest::aeCancelAndClearStayTerminalLocalAfterSubmittedRequest",
+        "mapped_forge_class": null,
+        "name_similarity": 1.0,
+        "wrapper_batch": "ae_smoke_cancel_clear_isolation",
+        "wrapper_id": "MineAgentAeFabricGameTestEntrypoint::aeCancelAndClearStayTerminalLocalAfterSubmittedRequest",
+        "wrapper_status": "passed",
+        "wrapper_testcase": "mineagentaefabricgametestentrypoint.aecancelandclearstayterminallocalaftersubmittedrequest"
       }
     ],
     "missing": [],
@@ -333,7 +373,7 @@
       "reported_in_xml": true,
       "runtime_status": "passed",
       "wrapper_id": "MineAgentAeFabricGameTestEntrypoint::craftLifecycleIsolation",
-      "xml_time": 0.026
+      "xml_time": 0.019
     },
     {
       "batch": "ae_smoke_approval_success",
@@ -342,7 +382,16 @@
       "reported_in_xml": true,
       "runtime_status": "passed",
       "wrapper_id": "MineAgentAeFabricGameTestEntrypoint::aeBoundTerminalApprovalSuccessHandoff",
-      "xml_time": 0.041
+      "xml_time": 0.036
+    },
+    {
+      "batch": "ae_smoke_binding_unavailable",
+      "module": "ext-ae-fabric",
+      "name": "mineagentaefabricgametestentrypoint.aeboundterminalapprovalfailswhenaebindingunavailable",
+      "reported_in_xml": true,
+      "runtime_status": "passed",
+      "wrapper_id": "MineAgentAeFabricGameTestEntrypoint::aeBoundTerminalApprovalFailsWhenAeBindingUnavailable",
+      "xml_time": 0.167
     },
     {
       "batch": "ae_smoke_teardown",
@@ -351,7 +400,7 @@
       "reported_in_xml": true,
       "runtime_status": "passed",
       "wrapper_id": "MineAgentAeFabricGameTestEntrypoint::aeTerminalTeardownClearsLiveJobs",
-      "xml_time": 0.024
+      "xml_time": 0.015
     },
     {
       "batch": "ae_smoke_invalidation",
@@ -360,7 +409,16 @@
       "reported_in_xml": true,
       "runtime_status": "passed",
       "wrapper_id": "MineAgentAeFabricGameTestEntrypoint::aeBindingInvalidationAfterTerminalRemovalOrWrongSide",
-      "xml_time": 0.023
+      "xml_time": 0.033
+    },
+    {
+      "batch": "ae_smoke_binding_reresolution",
+      "module": "ext-ae-fabric",
+      "name": "mineagentaefabricgametestentrypoint.aebindingbasedcontextreresolutionsucceedsuntilbindingbecomesstale",
+      "reported_in_xml": true,
+      "runtime_status": "passed",
+      "wrapper_id": "MineAgentAeFabricGameTestEntrypoint::aeBindingBasedContextReresolutionSucceedsUntilBindingBecomesStale",
+      "xml_time": 0.028
     },
     {
       "batch": "ae_smoke_cpu",
@@ -369,7 +427,25 @@
       "reported_in_xml": true,
       "runtime_status": "passed",
       "wrapper_id": "MineAgentAeFabricGameTestEntrypoint::aeCpuTargetedUnavailableCpuBranch",
-      "xml_time": 0.177
+      "xml_time": 0.05
+    },
+    {
+      "batch": "ae_smoke_terminal_removal",
+      "module": "ext-ae-fabric",
+      "name": "mineagentaefabricgametestentrypoint.aeterminalremovalinvalidatesmenucontextandclearsjobs",
+      "reported_in_xml": true,
+      "runtime_status": "passed",
+      "wrapper_id": "MineAgentAeFabricGameTestEntrypoint::aeTerminalRemovalInvalidatesMenuContextAndClearsJobs",
+      "xml_time": 0.016
+    },
+    {
+      "batch": "ae_smoke_cancel_clear_isolation",
+      "module": "ext-ae-fabric",
+      "name": "mineagentaefabricgametestentrypoint.aecancelandclearstayterminallocalaftersubmittedrequest",
+      "reported_in_xml": true,
+      "runtime_status": "passed",
+      "wrapper_id": "MineAgentAeFabricGameTestEntrypoint::aeCancelAndClearStayTerminalLocalAfterSubmittedRequest",
+      "xml_time": 0.022
     }
   ],
   "fabric_xml_reported_testcases": [
@@ -479,11 +555,35 @@
     },
     {
       "classname": "fabric-gametest-api-v1:empty",
+      "method_lc": "aeboundterminalapprovalfailswhenaebindingunavailable",
+      "module": "ext-ae-fabric",
+      "name": "mineagentaefabricgametestentrypoint.aeboundterminalapprovalfailswhenaebindingunavailable",
+      "status": "passed",
+      "time": 0.167
+    },
+    {
+      "classname": "fabric-gametest-api-v1:empty",
       "method_lc": "aecputargetedunavailablecpubranch",
       "module": "ext-ae-fabric",
       "name": "mineagentaefabricgametestentrypoint.aecputargetedunavailablecpubranch",
       "status": "passed",
-      "time": 0.177
+      "time": 0.05
+    },
+    {
+      "classname": "fabric-gametest-api-v1:empty",
+      "method_lc": "aecancelandclearstayterminallocalaftersubmittedrequest",
+      "module": "ext-ae-fabric",
+      "name": "mineagentaefabricgametestentrypoint.aecancelandclearstayterminallocalaftersubmittedrequest",
+      "status": "passed",
+      "time": 0.022
+    },
+    {
+      "classname": "fabric-gametest-api-v1:empty",
+      "method_lc": "aebindingbasedcontextreresolutionsucceedsuntilbindingbecomesstale",
+      "module": "ext-ae-fabric",
+      "name": "mineagentaefabricgametestentrypoint.aebindingbasedcontextreresolutionsucceedsuntilbindingbecomesstale",
+      "status": "passed",
+      "time": 0.028
     },
     {
       "classname": "fabric-gametest-api-v1:empty",
@@ -491,7 +591,7 @@
       "module": "ext-ae-fabric",
       "name": "mineagentaefabricgametestentrypoint.aeterminalteardownclearslivejobs",
       "status": "passed",
-      "time": 0.024
+      "time": 0.015
     },
     {
       "classname": "fabric-gametest-api-v1:empty",
@@ -499,7 +599,15 @@
       "module": "ext-ae-fabric",
       "name": "mineagentaefabricgametestentrypoint.craftlifecycleisolation",
       "status": "passed",
-      "time": 0.026
+      "time": 0.019
+    },
+    {
+      "classname": "fabric-gametest-api-v1:empty",
+      "method_lc": "aeterminalremovalinvalidatesmenucontextandclearsjobs",
+      "module": "ext-ae-fabric",
+      "name": "mineagentaefabricgametestentrypoint.aeterminalremovalinvalidatesmenucontextandclearsjobs",
+      "status": "passed",
+      "time": 0.016
     },
     {
       "classname": "fabric-gametest-api-v1:empty",
@@ -507,7 +615,7 @@
       "module": "ext-ae-fabric",
       "name": "mineagentaefabricgametestentrypoint.aebindinginvalidationafterterminalremovalorwrongside",
       "status": "passed",
-      "time": 0.023
+      "time": 0.033
     },
     {
       "classname": "fabric-gametest-api-v1:empty",
@@ -515,7 +623,7 @@
       "module": "ext-ae-fabric",
       "name": "mineagentaefabricgametestentrypoint.aeboundterminalapprovalsuccesshandoff",
       "status": "passed",
-      "time": 0.041
+      "time": 0.036
     }
   ],
   "forge_expected_scenarios": [
@@ -626,10 +734,31 @@
     },
     {
       "batch": "mineagentae",
+      "class_name": "AeBindingReresolutionGameTest",
+      "method_name": "aeBindingBasedContextReresolutionSucceedsUntilBindingBecomesStale",
+      "module": "ext-ae-forge",
+      "scenario_id": "AeBindingReresolutionGameTest::aeBindingBasedContextReresolutionSucceedsUntilBindingBecomesStale"
+    },
+    {
+      "batch": "mineagentae",
+      "class_name": "AeBoundTerminalApprovalBindingUnavailableGameTest",
+      "method_name": "aeBoundTerminalApprovalFailsWhenAeBindingUnavailable",
+      "module": "ext-ae-forge",
+      "scenario_id": "AeBoundTerminalApprovalBindingUnavailableGameTest::aeBoundTerminalApprovalFailsWhenAeBindingUnavailable"
+    },
+    {
+      "batch": "mineagentae",
       "class_name": "AeBoundTerminalApprovalSuccessGameTest",
       "method_name": "aeBoundTerminalApprovalSuccessHandoff",
       "module": "ext-ae-forge",
       "scenario_id": "AeBoundTerminalApprovalSuccessGameTest::aeBoundTerminalApprovalSuccessHandoff"
+    },
+    {
+      "batch": "mineagentae",
+      "class_name": "AeCancelClearIsolationGameTest",
+      "method_name": "aeCancelAndClearStayTerminalLocalAfterSubmittedRequest",
+      "module": "ext-ae-forge",
+      "scenario_id": "AeCancelClearIsolationGameTest::aeCancelAndClearStayTerminalLocalAfterSubmittedRequest"
     },
     {
       "batch": "mineagentae",
@@ -644,6 +773,13 @@
       "method_name": "craftLifecycleIsolation_beginSuccessFailure_withoutCrossTerminalLeakage",
       "module": "ext-ae-forge",
       "scenario_id": "AeCraftLifecycleIsolationGameTest::craftLifecycleIsolation_beginSuccessFailure_withoutCrossTerminalLeakage"
+    },
+    {
+      "batch": "mineagentae",
+      "class_name": "AeTerminalRemovalInvalidationGameTest",
+      "method_name": "aeTerminalRemovalInvalidatesMenuContextAndClearsJobs",
+      "module": "ext-ae-forge",
+      "scenario_id": "AeTerminalRemovalInvalidationGameTest::aeTerminalRemovalInvalidatesMenuContextAndClearsJobs"
     },
     {
       "batch": "mineagentae",

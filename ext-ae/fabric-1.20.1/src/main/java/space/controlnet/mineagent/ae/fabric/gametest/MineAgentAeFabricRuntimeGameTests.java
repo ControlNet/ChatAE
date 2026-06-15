@@ -54,8 +54,35 @@ public final class MineAgentAeFabricRuntimeGameTests {
         );
     }
 
+    public static void bindingBasedContextReresolutionSucceedsUntilBindingBecomesStale(GameTestHelper helper) {
+        AeBindingFailureGameTestScenarios.bindingBasedContextReresolutionSucceedsUntilBindingBecomesStale(
+                helper,
+                space.controlnet.mineagent.fabric.gametest.MineAgentFabricGameTestSupport::createServerPlayer
+        );
+    }
+
     public static void cpuTargetedUnavailableCpuBranch(GameTestHelper helper) {
         AeCraftLifecycleIsolationGameTestScenarios.cpuTargetedUnavailableCpuBranch(
+                helper,
+                (gameTestHelper, playerId, playerName) -> FakePlayer.get(
+                        gameTestHelper.getLevel(),
+                        new GameProfile(playerId, playerName)
+                )
+        );
+    }
+
+    public static void terminalRemovalInvalidatesMenuContextAndClearsJobs(GameTestHelper helper) {
+        AeCraftLifecycleIsolationGameTestScenarios.terminalRemovalInvalidatesMenuContextAndClearsJobs(
+                helper,
+                (gameTestHelper, playerId, playerName) -> FakePlayer.get(
+                        gameTestHelper.getLevel(),
+                        new GameProfile(playerId, playerName)
+                )
+        );
+    }
+
+    public static void cancelAndClearStayTerminalLocalAfterSubmittedRequest(GameTestHelper helper) {
+        AeCraftLifecycleIsolationGameTestScenarios.cancelAndClearStayTerminalLocalAfterSubmittedRequest(
                 helper,
                 (gameTestHelper, playerId, playerName) -> FakePlayer.get(
                         gameTestHelper.getLevel(),

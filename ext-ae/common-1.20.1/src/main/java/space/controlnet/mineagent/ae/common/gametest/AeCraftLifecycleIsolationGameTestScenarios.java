@@ -13,14 +13,20 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import space.controlnet.mineagent.ae.common.part.AiTerminalPartOperations;
+import space.controlnet.mineagent.ae.common.terminal.AeTerminalContextResolver;
 import space.controlnet.mineagent.ae.common.terminal.AeTerminalHost;
+import space.controlnet.mineagent.ae.core.terminal.AeTerminalContext;
+import space.controlnet.mineagent.ae.core.terminal.AiTerminalData;
 import space.controlnet.mineagent.common.gametest.AgentGameTestSupport;
 import space.controlnet.mineagent.common.gametest.GameTestPlayerFactory;
+import space.controlnet.mineagent.common.menu.AiTerminalMenu;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.ArrayDeque;
+import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.UUID;
@@ -36,6 +42,10 @@ public final class AeCraftLifecycleIsolationGameTestScenarios {
     private static final String TEARDOWN_PLAYER_NAME = "ae_teardown";
     private static final UUID CPU_PLAYER_ID = UUID.fromString("00000000-0000-0000-0000-000000000103");
     private static final String CPU_PLAYER_NAME = "ae_cpu_unavailable";
+    private static final UUID REMOVAL_PLAYER_ID = UUID.fromString("00000000-0000-0000-0000-000000000104");
+    private static final String REMOVAL_PLAYER_NAME = "ae_terminal_removal";
+    private static final UUID CANCEL_CLEAR_PLAYER_ID = UUID.fromString("00000000-0000-0000-0000-000000000105");
+    private static final String CANCEL_CLEAR_PLAYER_NAME = "ae_cancel_clear_isolation";
     private static final String ITEM_ID = "minecraft:stick";
 
     private AeCraftLifecycleIsolationGameTestScenarios() {
@@ -244,6 +254,288 @@ public final class AeCraftLifecycleIsolationGameTestScenarios {
                         AgentGameTestSupport.requireTrue(
                                 "task16/cpu-unavailable/no-live-jobs",
                                 terminal.getRequestedJobs().isEmpty()
+                        );
+
+                        succeedAndReset(helper);
+                    }
+            );
+        } catch (Throwable throwable) {
+            AgentGameTestSupport.resetRuntime();
+            throw throwable;
+        }
+    }
+
+    public static void cancelAndClearStayTerminalLocalAfterSubmittedRequest(
+            GameTestHelper helper,
+            GameTestPlayerFactory playerFactory
+    ) {
+        AgentGameTestSupport.initializeRuntime(helper);
+
+        try {
+            ServerPlayer player = playerFactory.create(helper, CANCEL_CLEAR_PLAYER_ID, CANCEL_CLEAR_PLAYER_NAME);
+            player.setPos(0.5D, 2.0D, 0.5D);
+
+            AeTerminalHost terminalHost = newTerminalHostProxy();
+            AiTerminalPartOperations terminalA = new AiTerminalPartOperations();
+            AiTerminalPartOperations terminalB = new AiTerminalPartOperations();
+            ControlledCraftingService serviceA = new ControlledCraftingService("task13/terminal-a");
+            ControlledCraftingService serviceB = new ControlledCraftingService("task13/terminal-b");
+            IGrid gridA = newGridProxy(serviceA);
+            IGrid gridB = newGridProxy(serviceB);
+
+            ControlledLink linkA = new ControlledLink("task13/link-a");
+            ControlledLink linkB = new ControlledLink("task13/link-b");
+            serviceA.enqueueSuccessfulCraft(linkA.link());
+            serviceB.enqueueSuccessfulCraft(linkB.link());
+
+            CraftRequestView requestA = invokeRequestCraft(
+                    terminalA,
+                    player,
+                    gridA,
+                    helper.getLevel(),
+                    terminalHost,
+                    ITEM_ID,
+                    1L,
+                    null
+            );
+            CraftRequestView requestB = invokeRequestCraft(
+                    terminalB,
+                    player,
+                    gridB,
+                    helper.getLevel(),
+                    terminalHost,
+                    ITEM_ID,
+                    1L,
+                    null
+            );
+
+            AgentGameTestSupport.requireEquals("task13/terminal-a/begin-status", "calculating", requestA.status());
+            AgentGameTestSupport.requireEquals("task13/terminal-b/begin-status", "calculating", requestB.status());
+            AgentGameTestSupport.requireTrue(
+                    "task13/request-job-ids-are-distinct",
+                    requestA.jobId() != null
+                            && !requestA.jobId().isBlank()
+                            && requestB.jobId() != null
+                            && !requestB.jobId().isBlank()
+                            && !requestA.jobId().equals(requestB.jobId())
+            );
+
+            awaitStatus(
+                    helper,
+                    "task13/terminal-a/wait-submitted",
+                    terminalA,
+                    requestA.jobId(),
+                    "submitted",
+                    80,
+                    () -> awaitStatus(
+                            helper,
+                            "task13/terminal-b/wait-submitted",
+                            terminalB,
+                            requestB.jobId(),
+                            "submitted",
+                            80,
+                            () -> {
+                                AgentGameTestSupport.requireEquals(
+                                        "task13/terminal-a/live-jobs-before-cancel",
+                                        ImmutableSet.of(linkA.link()),
+                                        terminalA.getRequestedJobs()
+                                );
+                                AgentGameTestSupport.requireEquals(
+                                        "task13/terminal-b/live-jobs-before-cancel",
+                                        ImmutableSet.of(linkB.link()),
+                                        terminalB.getRequestedJobs()
+                                );
+                                requireUnknownOnOtherTerminal(
+                                        "task13/terminal-a/foreign-job-unknown-before-cancel",
+                                        terminalA,
+                                        requestB.jobId()
+                                );
+                                requireUnknownOnOtherTerminal(
+                                        "task13/terminal-b/foreign-job-unknown-before-cancel",
+                                        terminalB,
+                                        requestA.jobId()
+                                );
+
+                                JobStatusView canceled = invokeCancelJob(terminalA, requestA.jobId());
+                                AgentGameTestSupport.requireEquals(
+                                        "task13/terminal-a/cancel-job-id",
+                                        requestA.jobId(),
+                                        canceled.jobId()
+                                );
+                                AgentGameTestSupport.requireEquals(
+                                        "task13/terminal-a/cancel-status",
+                                        "canceled",
+                                        canceled.status()
+                                );
+                                AgentGameTestSupport.requireTrue(
+                                        "task13/terminal-a/cancel-error-empty",
+                                        canceled.error().isEmpty()
+                                );
+                                AgentGameTestSupport.requireEquals(
+                                        "task13/terminal-a/status-stays-canceled-after-refresh",
+                                        "canceled",
+                                        invokeJobStatus(terminalA, requestA.jobId()).status()
+                                );
+                                AgentGameTestSupport.requireTrue(
+                                        "task13/terminal-a/live-jobs-cleared-after-cancel",
+                                        terminalA.getRequestedJobs().isEmpty()
+                                );
+
+                                AgentGameTestSupport.requireEquals(
+                                        "task13/terminal-b/status-unaffected-after-terminal-a-cancel",
+                                        "submitted",
+                                        invokeJobStatus(terminalB, requestB.jobId()).status()
+                                );
+                                AgentGameTestSupport.requireEquals(
+                                        "task13/terminal-b/live-jobs-still-present-after-terminal-a-cancel",
+                                        ImmutableSet.of(linkB.link()),
+                                        terminalB.getRequestedJobs()
+                                );
+                                requireUnknownOnOtherTerminal(
+                                        "task13/terminal-b/foreign-job-unknown-after-cancel",
+                                        terminalB,
+                                        requestA.jobId()
+                                );
+
+                                terminalA.clearJobs();
+
+                                JobStatusView clearedStatus = invokeJobStatus(terminalA, requestA.jobId());
+                                AgentGameTestSupport.requireEquals(
+                                        "task13/terminal-a/status-after-clear",
+                                        "unknown",
+                                        clearedStatus.status()
+                                );
+                                AgentGameTestSupport.requireEquals(
+                                        "task13/terminal-a/error-after-clear",
+                                        Optional.of("Job not found"),
+                                        clearedStatus.error()
+                                );
+                                AgentGameTestSupport.requireEquals(
+                                        "task13/terminal-b/status-unaffected-after-terminal-a-clear",
+                                        "submitted",
+                                        invokeJobStatus(terminalB, requestB.jobId()).status()
+                                );
+                                AgentGameTestSupport.requireEquals(
+                                        "task13/terminal-b/live-jobs-still-present-after-terminal-a-clear",
+                                        ImmutableSet.of(linkB.link()),
+                                        terminalB.getRequestedJobs()
+                                );
+                                requireUnknownOnOtherTerminal(
+                                        "task13/terminal-a/foreign-job-unknown-after-clear",
+                                        terminalA,
+                                        requestB.jobId()
+                                );
+
+                                succeedAndReset(helper);
+                            }
+                    )
+            );
+        } catch (Throwable throwable) {
+            AgentGameTestSupport.resetRuntime();
+            throw throwable;
+        }
+    }
+
+    public static void terminalRemovalInvalidatesMenuContextAndClearsJobs(
+            GameTestHelper helper,
+            GameTestPlayerFactory playerFactory
+    ) {
+        AgentGameTestSupport.initializeRuntime(helper);
+
+        try {
+            ServerPlayer player = playerFactory.create(helper, REMOVAL_PLAYER_ID, REMOVAL_PLAYER_NAME);
+            player.setPos(0.5D, 2.0D, 0.5D);
+
+            MutableLifecycleTerminalHost terminalHost = new MutableLifecycleTerminalHost(helper.getLevel(), player.blockPosition());
+            ControlledCraftingService service = new ControlledCraftingService("task11/terminal-removal");
+            IGrid grid = newGridProxy(service);
+            terminalHost.attachGrid(grid);
+
+            AiTerminalMenu menu = new AiTerminalMenu(42, player.getInventory(), terminalHost.proxy(), player.blockPosition(), null);
+            setContainerMenu(player, menu);
+
+            AeTerminalContextResolver resolver = new AeTerminalContextResolver();
+            AgentGameTestSupport.requireTrue(
+                    "task11/terminal-removal/menu-valid-before-request",
+                    menu.stillValid(player)
+            );
+            AeTerminalContext liveContext = requireAeContext(
+                    "task11/terminal-removal/live-context-before-request",
+                    resolver.fromPlayer(player)
+            );
+
+            ControlledLink liveLink = new ControlledLink("task11/removal-live-link");
+            service.enqueueSuccessfulCraft(liveLink.link());
+
+            AiTerminalData.AeCraftRequest request = liveContext.requestCraft(ITEM_ID, 1L, null);
+            AgentGameTestSupport.requireEquals("task11/terminal-removal/begin-status", "calculating", request.status());
+            AgentGameTestSupport.requireTrue(
+                    "task11/terminal-removal/begin-job-id",
+                    request.jobId() != null && !request.jobId().isBlank()
+            );
+            AgentGameTestSupport.requireTrue(
+                    "task11/terminal-removal/begin-error-empty",
+                    request.error().isEmpty()
+            );
+
+            awaitStatus(
+                    helper,
+                    "task11/terminal-removal/wait-submitted",
+                    terminalHost.ops(),
+                    request.jobId(),
+                    "submitted",
+                    80,
+                    () -> {
+                        AgentGameTestSupport.requireEquals(
+                                "task11/terminal-removal/live-jobs-before-removal",
+                                ImmutableSet.of(liveLink.link()),
+                                terminalHost.proxy().getRequestedJobs()
+                        );
+                        AgentGameTestSupport.requireTrue(
+                                "task11/terminal-removal/menu-valid-before-removal",
+                                menu.stillValid(player)
+                        );
+                        AgentGameTestSupport.requireTrue(
+                                "task11/terminal-removal/live-context-still-present-before-removal",
+                                resolver.fromPlayer(player).isPresent()
+                        );
+
+                        terminalHost.removeFromWorld();
+
+                        AgentGameTestSupport.requireTrue(
+                                "task11/terminal-removal/live-jobs-cleared",
+                                terminalHost.proxy().getRequestedJobs().isEmpty()
+                        );
+                        AgentGameTestSupport.requireTrue(
+                                "task11/terminal-removal/menu-invalid-after-removal",
+                                !menu.stillValid(player)
+                        );
+                        AgentGameTestSupport.requireTrue(
+                                "task11/terminal-removal/resolver-empty-after-removal",
+                                resolver.fromPlayer(player).isEmpty()
+                        );
+
+                        AiTerminalData.AeJobStatus removedStatus = liveContext.jobStatus(request.jobId());
+                        AgentGameTestSupport.requireEquals(
+                                "task11/terminal-removal/job-status-after-removal",
+                                "unknown",
+                                removedStatus.status()
+                        );
+                        AgentGameTestSupport.requireEquals(
+                                "task11/terminal-removal/job-error-after-removal",
+                                Optional.of("Job not found"),
+                                removedStatus.error()
+                        );
+
+                        AiTerminalData.AeListResult removedList = liveContext.listItems("", false, 10, null);
+                        AgentGameTestSupport.requireTrue(
+                                "task11/terminal-removal/list-results-empty-after-removal",
+                                removedList.results().isEmpty()
+                        );
+                        AgentGameTestSupport.requireEquals(
+                                "task11/terminal-removal/list-error-after-removal",
+                                Optional.of("AE2 network not connected"),
+                                removedList.error()
                         );
 
                         succeedAndReset(helper);
@@ -478,6 +770,35 @@ public final class AeCraftLifecycleIsolationGameTestScenarios {
         AgentGameTestSupport.requireEquals(assertionPrefix + "/missing-job-error", "Job not found", status.error().orElseThrow());
     }
 
+    private static AeTerminalContext requireAeContext(
+            String assertionName,
+            Optional<space.controlnet.mineagent.core.terminal.TerminalContext> context
+    ) {
+        AgentGameTestSupport.requireTrue(assertionName, context.isPresent());
+        Object resolved = context.orElseThrow();
+        if (resolved instanceof AeTerminalContext aeTerminalContext) {
+            return aeTerminalContext;
+        }
+        throw new AssertionError(assertionName + " -> unexpected context type: " + resolved.getClass().getName());
+    }
+
+    private static void setContainerMenu(ServerPlayer player, AiTerminalMenu menu) {
+        Class<?> currentClass = Player.class;
+        while (currentClass != null) {
+            try {
+                Field field = currentClass.getDeclaredField("containerMenu");
+                field.setAccessible(true);
+                field.set(player, menu);
+                return;
+            } catch (NoSuchFieldException noSuchFieldException) {
+                currentClass = currentClass.getSuperclass();
+            } catch (Exception exception) {
+                throw new AssertionError("task11/terminal-removal/set-container-menu", AgentGameTestSupport.rootCause(exception));
+            }
+        }
+        throw new AssertionError("task11/terminal-removal/set-container-menu -> field not found");
+    }
+
     private static CraftRequestView invokeRequestCraft(
             AiTerminalPartOperations ops,
             Player player,
@@ -521,6 +842,20 @@ public final class AeCraftLifecycleIsolationGameTestScenarios {
             );
         } catch (Exception exception) {
             throw new AssertionError("task12/reflection/job-status", AgentGameTestSupport.rootCause(exception));
+        }
+    }
+
+    private static JobStatusView invokeCancelJob(AiTerminalPartOperations ops, String jobId) {
+        try {
+            Method method = AiTerminalPartOperations.class.getDeclaredMethod("cancelJob", String.class);
+            Object result = method.invoke(ops, jobId);
+            return new JobStatusView(
+                    invokeRecordString(result, "jobId"),
+                    invokeRecordString(result, "status"),
+                    invokeRecordOptionalString(result, "error")
+            );
+        } catch (Exception exception) {
+            throw new AssertionError("task13/reflection/cancel-job", AgentGameTestSupport.rootCause(exception));
         }
     }
 
@@ -845,6 +1180,130 @@ public final class AeCraftLifecycleIsolationGameTestScenarios {
         private void markDone() {
             done.set(true);
             canceled.set(false);
+        }
+    }
+
+    private static final class MutableLifecycleTerminalHost {
+        private final AiTerminalPartOperations ops = new AiTerminalPartOperations();
+        private final AtomicReference<AeTerminalHost> proxy = new AtomicReference<>();
+        private final AtomicReference<IGrid> grid = new AtomicReference<>();
+        private final AtomicReference<Level> hostLevel = new AtomicReference<>();
+        private final AtomicReference<BlockPos> hostPos = new AtomicReference<>(BlockPos.ZERO);
+        private final AtomicBoolean removed = new AtomicBoolean(false);
+
+        private MutableLifecycleTerminalHost(Level level, BlockPos pos) {
+            hostLevel.set(level);
+            hostPos.set(pos);
+
+            IGridNode nodeProxy = (IGridNode) Proxy.newProxyInstance(
+                    IGridNode.class.getClassLoader(),
+                    new Class[]{IGridNode.class},
+                    (proxyInstance, method, args) -> switch (method.getName()) {
+                        case "equals" -> proxyInstance == args[0];
+                        case "hashCode" -> System.identityHashCode(proxyInstance);
+                        case "toString" -> "task11-removal-grid-node-proxy";
+                        default -> defaultValue(method.getReturnType());
+                    }
+            );
+
+            InvocationHandler handler = (proxyInstance, method, args) -> switch (method.getName()) {
+                case "listItems" -> listItems((String) args[0], (Boolean) args[1], (Integer) args[2], (String) args[3]);
+                case "listCraftables" -> listCraftables((String) args[0], (Integer) args[1], (String) args[2]);
+                case "simulateCraft" -> simulateCraft((Player) args[0], (String) args[1], ((Number) args[2]).longValue());
+                case "requestCraft" -> requestCraft((Player) args[0], (String) args[1], ((Number) args[2]).longValue(), (String) args[3]);
+                case "jobStatus" -> ops.jobStatus((String) args[0]);
+                case "cancelJob" -> ops.cancelJob((String) args[0]);
+                case "getRequestedJobs" -> ops.getRequestedJobs();
+                case "insertCraftedItems" -> insertCraftedItems(
+                        (ICraftingLink) args[0],
+                        args[1],
+                        ((Number) args[2]).longValue(),
+                        args[3]
+                );
+                case "jobStateChange" -> {
+                    ops.jobStateChange((ICraftingLink) args[0]);
+                    yield null;
+                }
+                case "getActionableNode" -> nodeProxy;
+                case "getHostPos" -> hostPos.get();
+                case "getHostLevel" -> hostLevel.get();
+                case "isRemovedHost" -> removed.get();
+                case "equals" -> proxyInstance == args[0];
+                case "hashCode" -> System.identityHashCode(proxyInstance);
+                case "toString" -> "task11-mutable-lifecycle-ae-host";
+                default -> defaultValue(method.getReturnType());
+            };
+
+            proxy.set((AeTerminalHost) Proxy.newProxyInstance(
+                    AeTerminalHost.class.getClassLoader(),
+                    new Class[]{AeTerminalHost.class},
+                    handler
+            ));
+        }
+
+        private AiTerminalPartOperations ops() {
+            return ops;
+        }
+
+        private AeTerminalHost proxy() {
+            return proxy.get();
+        }
+
+        private void attachGrid(IGrid grid) {
+            this.grid.set(grid);
+        }
+
+        private void removeFromWorld() {
+            ops.clearJobs();
+            grid.set(null);
+            removed.set(true);
+        }
+
+        private AiTerminalData.AeListResult listItems(String query, boolean craftableOnly, int limit, String pageToken) {
+            IGrid currentGrid = grid.get();
+            if (removed.get() || currentGrid == null) {
+                return new AiTerminalData.AeListResult(List.of(), Optional.empty(), Optional.of("AE2 network not connected"));
+            }
+            return ops.listItems(currentGrid, query, craftableOnly, limit, pageToken);
+        }
+
+        private AiTerminalData.AeListResult listCraftables(String query, int limit, String pageToken) {
+            IGrid currentGrid = grid.get();
+            if (removed.get() || currentGrid == null) {
+                return new AiTerminalData.AeListResult(List.of(), Optional.empty(), Optional.of("AE2 network not connected"));
+            }
+            return ops.listCraftables(currentGrid, query, limit, pageToken);
+        }
+
+        private AiTerminalData.AeCraftSimulation simulateCraft(Player player, String itemId, long count) {
+            IGrid currentGrid = grid.get();
+            if (removed.get() || currentGrid == null) {
+                return new AiTerminalData.AeCraftSimulation("", "error", List.of(), Optional.of("AE2 network not connected"));
+            }
+            return ops.simulateCraft(player, currentGrid, hostLevel.get(), proxy(), itemId, count);
+        }
+
+        private AiTerminalData.AeCraftRequest requestCraft(Player player, String itemId, long count, String cpuName) {
+            IGrid currentGrid = grid.get();
+            if (removed.get() || currentGrid == null) {
+                return new AiTerminalData.AeCraftRequest("", "error", Optional.of("AE2 network not connected"));
+            }
+            return ops.requestCraft(player, currentGrid, hostLevel.get(), proxy(), itemId, count, cpuName);
+        }
+
+        private long insertCraftedItems(ICraftingLink link, Object what, long amount, Object mode) {
+            IGrid currentGrid = grid.get();
+            if (removed.get() || currentGrid == null) {
+                return 0L;
+            }
+            return ops.insertCraftedItems(
+                    currentGrid,
+                    link,
+                    (appeng.api.stacks.AEKey) what,
+                    amount,
+                    (appeng.api.config.Actionable) mode,
+                    proxy()
+            );
         }
     }
 }

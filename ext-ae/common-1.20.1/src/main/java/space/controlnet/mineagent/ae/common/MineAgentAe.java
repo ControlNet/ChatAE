@@ -18,11 +18,15 @@ public final class MineAgentAe {
     }
 
     public static void init() {
+        initCommonWiring();
         MineAgentAePartRegistries.init();
+        LOGGER.info("MineAgentAe initialized");
+    }
+
+    static void initCommonWiring() {
         ToolRegistry.register("ae", new AeToolProvider());
         ToolRegistry.setGroupId("ae", MOD_ID);
         TerminalContextRegistry.register(new AeTerminalContextResolver());
         ToolOutputRendererRegistry.register(new AeToolOutputRenderer());
-        LOGGER.info("MineAgentAe initialized");
     }
 }

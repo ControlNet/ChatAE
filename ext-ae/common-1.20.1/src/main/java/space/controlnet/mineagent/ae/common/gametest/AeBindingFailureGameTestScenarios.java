@@ -1,9 +1,29 @@
 package space.controlnet.mineagent.ae.common.gametest;
 
+import appeng.api.parts.IFacadeContainer;
+import appeng.api.parts.IPart;
+import appeng.api.parts.IPartHost;
+import appeng.api.parts.IPartItem;
+import appeng.api.parts.SelectedPart;
+import appeng.api.util.AEColor;
+import appeng.api.util.AECableType;
+import appeng.api.util.DimensionalBlockPos;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import space.controlnet.mineagent.ae.core.terminal.AeTerminalContext;
 import space.controlnet.mineagent.ae.core.terminal.AiTerminalData;
 import space.controlnet.mineagent.ae.common.terminal.AeTerminalContextResolver;
@@ -44,6 +64,8 @@ public final class AeBindingFailureGameTestScenarios {
     private static final String SUCCESS_PLAYER_NAME = "ae_binding_success";
     private static final UUID INVALIDATION_PLAYER_ID = UUID.fromString("00000000-0000-0000-0000-000000000143");
     private static final String INVALIDATION_PLAYER_NAME = "ae_binding_invalidation";
+    private static final UUID RERESOLUTION_PLAYER_ID = UUID.fromString("00000000-0000-0000-0000-000000000144");
+    private static final String RERESOLUTION_PLAYER_NAME = "ae_binding_reresolution";
 
     private AeBindingFailureGameTestScenarios() {
     }
@@ -349,6 +371,86 @@ public final class AeBindingFailureGameTestScenarios {
         }
     }
 
+    public static void bindingBasedContextReresolutionSucceedsUntilBindingBecomesStale(
+            GameTestHelper helper,
+            GameTestPlayerFactory playerFactory
+    ) {
+        AgentGameTestSupport.initializeRuntime(helper);
+
+        ServerPlayer player = playerFactory.create(helper, RERESOLUTION_PLAYER_ID, RERESOLUTION_PLAYER_NAME);
+        player.setPos(0.5D, 2.0D, 0.5D);
+
+        BlockPos hostPos = player.blockPosition().east();
+        MutableBindingPartHostBlockEntity bindingHost = new MutableBindingPartHostBlockEntity(
+                helper.getLevel(),
+                hostPos,
+                Direction.NORTH
+        );
+
+        try {
+            bindingHost.installInWorld();
+            AgentGameTestSupport.requireTrue(
+                    "task12/binding-reresolution/world-block-entity-installed",
+                    helper.getLevel().getBlockEntity(hostPos) == bindingHost
+            );
+
+            AeTerminalContextResolver resolver = new AeTerminalContextResolver();
+            setContainerMenu(player, new AiTerminalMenu(42, player.getInventory(), bindingHost.terminalHost(), hostPos, Direction.NORTH));
+            AgentGameTestSupport.requireTrue(
+                    "task12/binding-reresolution/live-menu-context-present",
+                    resolver.fromPlayer(player).isPresent()
+            );
+
+            TerminalBinding binding = new TerminalBinding(
+                    helper.getLevel().dimension().location().toString(),
+                    hostPos.getX(),
+                    hostPos.getY(),
+                    hostPos.getZ(),
+                    Optional.of(Direction.NORTH.name())
+            );
+
+            setContainerMenu(player, player.inventoryMenu);
+            AgentGameTestSupport.requireTrue(
+                    "task12/binding-reresolution/non-ae-menu-context-empty",
+                    resolver.fromPlayer(player).isEmpty()
+            );
+
+            AeTerminalContext reboundContext = requireAeContext(
+                    "task12/binding-reresolution/live-binding-context-present",
+                    resolver.fromPlayerAtBinding(player, binding)
+            );
+            assertListResult(
+                    "task12/binding-reresolution/live-binding-list",
+                    reboundContext.listItems("", false, 10, null)
+            );
+
+            AeTerminalContext reboundContextAgain = requireAeContext(
+                    "task12/binding-reresolution/live-binding-context-present-repeat",
+                    resolver.fromPlayerAtBinding(player, binding)
+            );
+            assertListResult(
+                    "task12/binding-reresolution/live-binding-list-repeat",
+                    reboundContextAgain.listItems("", false, 10, null)
+            );
+
+            bindingHost.clearBindingPart();
+
+            AgentGameTestSupport.requireTrue(
+                    "task12/binding-reresolution/stale-binding-empty",
+                    resolver.fromPlayerAtBinding(player, binding).isEmpty()
+            );
+            AgentGameTestSupport.requireTrue(
+                    "task12/binding-reresolution/stale-binding-empty-repeat",
+                    resolver.fromPlayerAtBinding(player, binding).isEmpty()
+            );
+
+            helper.succeed();
+        } finally {
+            bindingHost.clearBindingPart();
+            AgentGameTestSupport.resetRuntime();
+        }
+    }
+
     private static AgentRunnerState replaceAgentRunner(Object runner) {
         try {
             Field agentField = MineAgentNetwork.class.getDeclaredField("AGENT");
@@ -391,6 +493,10 @@ public final class AeBindingFailureGameTestScenarios {
     }
 
     private static void setContainerMenu(ServerPlayer player, AiTerminalMenu menu) {
+        setContainerMenu(player, (AbstractContainerMenu) menu);
+    }
+
+    private static void setContainerMenu(ServerPlayer player, AbstractContainerMenu menu) {
         Class<?> currentClass = Player.class;
         while (currentClass != null) {
             try {
@@ -405,6 +511,29 @@ public final class AeBindingFailureGameTestScenarios {
             }
         }
         throw new AssertionError("task16/binding-invalidation/set-container-menu -> field not found");
+    }
+
+    private static AeTerminalContext requireAeContext(
+            String assertionName,
+            Optional<space.controlnet.mineagent.core.terminal.TerminalContext> context
+    ) {
+        AgentGameTestSupport.requireTrue(assertionName, context.isPresent());
+        Object resolved = context.orElseThrow();
+        if (resolved instanceof AeTerminalContext aeTerminalContext) {
+            return aeTerminalContext;
+        }
+        throw new AssertionError(assertionName + " -> unexpected context type: " + resolved.getClass().getName());
+    }
+
+    private static void assertListResult(String assertionPrefix, AiTerminalData.AeListResult result) {
+        AgentGameTestSupport.requireTrue(assertionPrefix + "/error-empty", result.error().isEmpty());
+        AgentGameTestSupport.requireTrue(assertionPrefix + "/next-page-empty", result.nextPageToken().isEmpty());
+        AgentGameTestSupport.requireEquals(assertionPrefix + "/result-count", 1, result.results().size());
+
+        AiTerminalData.AeEntry entry = result.results().get(0);
+        AgentGameTestSupport.requireEquals(assertionPrefix + "/item-id", "minecraft:stick", entry.itemId());
+        AgentGameTestSupport.requireEquals(assertionPrefix + "/amount", 4L, entry.amount());
+        AgentGameTestSupport.requireTrue(assertionPrefix + "/craftable", entry.craftable());
     }
 
     private static ChatMessage requireLastMessageOfRole(String assertionName, List<ChatMessage> messages, ChatRole role) {
@@ -619,6 +748,201 @@ public final class AeBindingFailureGameTestScenarios {
 
         private AeTerminalHost proxy() {
             return proxy.get();
+        }
+    }
+
+    private static final class MutableBindingPartHostBlockEntity extends BlockEntity implements IPartHost {
+        private final AtomicReference<Level> hostLevel = new AtomicReference<>();
+        private final AtomicReference<AeTerminalHost> terminalHost = new AtomicReference<>();
+        private final AtomicReference<IPart> bindingPart = new AtomicReference<>();
+        private final Direction bindingSide;
+
+        private MutableBindingPartHostBlockEntity(Level level, BlockPos pos, Direction bindingSide) {
+            super(BlockEntityType.CHEST, pos, Blocks.CHEST.defaultBlockState());
+            this.bindingSide = bindingSide;
+            hostLevel.set(level);
+
+            InvocationHandler terminalHandler = (proxyInstance, method, args) -> switch (method.getName()) {
+                case "listItems" -> new AiTerminalData.AeListResult(
+                        List.of(new AiTerminalData.AeEntry("minecraft:stick", 4L, true)),
+                        Optional.empty(),
+                        Optional.empty()
+                );
+                case "listCraftables" -> new AiTerminalData.AeListResult(
+                        List.of(new AiTerminalData.AeEntry("minecraft:stick", 4L, true)),
+                        Optional.empty(),
+                        Optional.empty()
+                );
+                case "simulateCraft" -> new AiTerminalData.AeCraftSimulation("", "error", List.of(), Optional.of("not used"));
+                case "requestCraft" -> new AiTerminalData.AeCraftRequest("", "error", Optional.of("not used"));
+                case "jobStatus" -> new AiTerminalData.AeJobStatus("", "unknown", List.of(), Optional.of("Job not found"));
+                case "cancelJob" -> new AiTerminalData.AeJobStatus("", "canceled", List.of(), Optional.empty());
+                case "getRequestedJobs" -> com.google.common.collect.ImmutableSet.of();
+                case "insertCraftedItems" -> 0L;
+                case "jobStateChange" -> null;
+                case "getHostPos" -> getBlockPos();
+                case "getHostLevel" -> hostLevel.get();
+                case "isRemovedHost" -> false;
+                case "equals" -> proxyInstance == args[0];
+                case "hashCode" -> System.identityHashCode(proxyInstance);
+                case "toString" -> "task12-binding-reresolution-terminal-part";
+                default -> defaultValue(method.getReturnType());
+            };
+
+            Object terminalProxy = Proxy.newProxyInstance(
+                    AeTerminalHost.class.getClassLoader(),
+                    new Class[]{AeTerminalHost.class, IPart.class},
+                    terminalHandler
+            );
+            terminalHost.set((AeTerminalHost) terminalProxy);
+            bindingPart.set((IPart) terminalProxy);
+        }
+
+        private void installInWorld() {
+            Level level = AgentGameTestSupport.requireNonNull("task12/binding-reresolution/install-level", hostLevel.get());
+            level.setBlock(getBlockPos(), Blocks.CHEST.defaultBlockState(), 3);
+            try {
+                Object chunk = level.getChunkAt(getBlockPos());
+                chunk.getClass().getMethod("setBlockEntity", BlockEntity.class).invoke(chunk, this);
+            } catch (Exception exception) {
+                throw new AssertionError(
+                        "task12/binding-reresolution/install-block-entity",
+                        AgentGameTestSupport.rootCause(exception)
+                );
+            }
+            setChanged();
+        }
+
+        private AeTerminalHost terminalHost() {
+            return terminalHost.get();
+        }
+
+        private void clearBindingPart() {
+            bindingPart.set(null);
+        }
+
+        @Override
+        public float getCableConnectionLength(AECableType cable) {
+            return 0.0F;
+        }
+
+        @Override
+        public IFacadeContainer getFacadeContainer() {
+            return null;
+        }
+
+        @Override
+        public IPart getPart(Direction side) {
+            if (side == bindingSide) {
+                return bindingPart.get();
+            }
+            return null;
+        }
+
+        @Override
+        public boolean canAddPart(ItemStack part, Direction side) {
+            return false;
+        }
+
+        @Override
+        public <T extends IPart> T addPart(IPartItem<T> partItem, Direction side, Player owner) {
+            return null;
+        }
+
+        @Override
+        public <T extends IPart> T replacePart(IPartItem<T> partItem, Direction side, Player owner, InteractionHand hand) {
+            return null;
+        }
+
+        @Override
+        public void removePartFromSide(Direction side) {
+            if (side == bindingSide) {
+                bindingPart.set(null);
+            }
+        }
+
+        @Override
+        public void markForUpdate() {
+        }
+
+        @Override
+        public DimensionalBlockPos getLocation() {
+            return null;
+        }
+
+        @Override
+        public BlockEntity getBlockEntity() {
+            return this;
+        }
+
+        @Override
+        public AEColor getColor() {
+            return AEColor.TRANSPARENT;
+        }
+
+        @Override
+        public void clearContainer() {
+            bindingPart.set(null);
+        }
+
+        @Override
+        public boolean isBlocked(Direction side) {
+            return false;
+        }
+
+        @Override
+        public SelectedPart selectPartLocal(Vec3 pos) {
+            return null;
+        }
+
+        @Override
+        public VoxelShape getCollisionShape(CollisionContext context) {
+            return null;
+        }
+
+        @Override
+        public boolean removePart(IPart part) {
+            if (bindingPart.get() == part) {
+                bindingPart.set(null);
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public void markForSave() {
+        }
+
+        @Override
+        public void partChanged() {
+        }
+
+        @Override
+        public boolean hasRedstone() {
+            return false;
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return bindingPart.get() == null;
+        }
+
+        @Override
+        public void cleanup() {
+            bindingPart.set(null);
+        }
+
+        @Override
+        public void notifyNeighbors() {
+        }
+
+        @Override
+        public void notifyNeighborNow(Direction side) {
+        }
+
+        @Override
+        public boolean isInWorld() {
+            return true;
         }
     }
 }

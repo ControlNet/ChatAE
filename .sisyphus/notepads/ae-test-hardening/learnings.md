@@ -68,3 +68,8 @@ Initial note file for accumulated implementation learnings.
 ## 2026-04-23T06:00:00Z Task 14: nightly Forge AE rollout wiring
 - The nightly CI collector already accepts Forge log, Forge XML report, and Forge exit-code inputs, so the AE Forge rollout can stay isolated to `.github/workflows/layered-testing.yml` without adding new parsing code.
 - Nightly AE Forge evidence is captured under `ci-reports/nightly/ext-ae-forge-gametest.log` and `ext-ae/forge-1.20.1/build/reports/**/*.xml`, keeping the rollout visible in the nightly summary/artifact set while PR/dev lanes remain unchanged.
+
+## 2026-04-23T00:00:00Z Task 15: runtime-doc sync after AE hardening
+- `REPO.md` section 16 was stale on three points at once: it still described only five ext-AE runtime branches, treated the Forge command as a dev-lane-only concept, and did not call out the nightly-only AE Forge rollout policy.
+- `docs/layered-testing-ci.md` now mirrors `.github/workflows/layered-testing.yml` exactly for the Nightly lane: base Fabric GameTests, ext-AE Fabric `ae_smoke`, and nightly-only ext-AE Forge GameTests with their log/XML artifacts.
+- The checked-in parity snapshot now reflects the final nine-scenario shared ext-AE surface, while still marking the three newest Fabric wrappers as `xml_missing` because the local checked-in Fabric XML evidence in this workspace does not enumerate them.

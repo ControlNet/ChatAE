@@ -19,7 +19,7 @@ public final class AeToolOutputRenderer implements ToolOutputRenderer {
         }
         if (output.has("results") && output.get("results").isJsonArray()) {
             JsonArray results = output.getAsJsonArray("results");
-            return isAeListResults(results);
+            return isAeListResults(results) || isExplicitEmptyAeList(output, results);
         }
         return output.has("jobId");
     }
@@ -31,7 +31,7 @@ public final class AeToolOutputRenderer implements ToolOutputRenderer {
         }
         if (output.has("results") && output.get("results").isJsonArray()) {
             JsonArray results = output.getAsJsonArray("results");
-            if (isAeListResults(results)) {
+            if (isAeListResults(results) || isExplicitEmptyAeList(output, results)) {
                 return formatAeList(results, getString(output, "nextPageToken"), getString(output, "error"));
             }
         }
@@ -44,6 +44,13 @@ public final class AeToolOutputRenderer implements ToolOutputRenderer {
     private boolean isAeListResults(JsonArray results) {
         JsonObject first = firstObject(results);
         return first != null && first.has("itemId") && first.has("amount");
+    }
+
+    private boolean isExplicitEmptyAeList(JsonObject output, JsonArray results) {
+        return output != null
+                && results != null
+                && results.isEmpty()
+                && (output.has("nextPageToken") || output.has("error"));
     }
 
     private List<String> formatAeList(JsonArray results, String nextPageToken, String error) {
@@ -62,7 +69,7 @@ public final class AeToolOutputRenderer implements ToolOutputRenderer {
                 String itemId = getString(obj, "itemId");
                 long amount = getLong(obj, "amount", 0);
                 boolean craftable = getBoolean(obj, "craftable");
-                String label = ToolOutputFormatter.formatItemTag(itemId) + " — " + amount;
+                String label = formatItemTag(itemId) + " — " + amount;
                 if (craftable) {
                     label += " (craftable)";
                 }
@@ -102,7 +109,7 @@ public final class AeToolOutputRenderer implements ToolOutputRenderer {
                 }
                 String itemId = getString(item, "itemId");
                 long amount = getLong(item, "amount", 0);
-                lines.add("• " + amount + "x " + ToolOutputFormatter.formatItemTag(itemId));
+                lines.add("• " + amount + "x " + formatItemTag(itemId));
             }
             if (missing.size() > shown) {
                 lines.add("• +" + (missing.size() - shown) + " more");
@@ -160,6 +167,14 @@ public final class AeToolOutputRenderer implements ToolOutputRenderer {
             return obj.get(key).getAsBoolean();
         } catch (Exception ignored) {
             return false;
+        }
+    }
+
+    private static String formatItemTag(String itemId) {
+        try {
+            return ToolOutputFormatter.formatItemTag(itemId);
+        } catch (NoClassDefFoundError ignored) {
+            return itemId == null || itemId.isBlank() ? "unknown" : itemId;
         }
     }
 }

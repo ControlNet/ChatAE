@@ -1,7 +1,7 @@
 # Fabric-vs-Forge GameTest Parity Report (Task 18)
 
 ## Summary
-- Matched: 19
+- Matched: 23
 - Missing: 0
 - Wrapper-only: 0
 - Runtime-blocked: 0
@@ -24,9 +24,13 @@
 - `mineagentfabricgametestentrypoint.baseagentsystemreliability` (base-fabric, batch=mineagent_agent_runtime, runtime_status=passed, reported_in_xml=true)
 - `mineagentaefabricgametestentrypoint.craftlifecycleisolation` (ext-ae-fabric, batch=ae_smoke_craft, runtime_status=passed, reported_in_xml=true)
 - `mineagentaefabricgametestentrypoint.aeboundterminalapprovalsuccesshandoff` (ext-ae-fabric, batch=ae_smoke_approval_success, runtime_status=passed, reported_in_xml=true)
+- `mineagentaefabricgametestentrypoint.aeboundterminalapprovalfailswhenaebindingunavailable` (ext-ae-fabric, batch=ae_smoke_binding_unavailable, runtime_status=passed, reported_in_xml=true)
 - `mineagentaefabricgametestentrypoint.aeterminalteardownclearslivejobs` (ext-ae-fabric, batch=ae_smoke_teardown, runtime_status=passed, reported_in_xml=true)
 - `mineagentaefabricgametestentrypoint.aebindinginvalidationafterterminalremovalorwrongside` (ext-ae-fabric, batch=ae_smoke_invalidation, runtime_status=passed, reported_in_xml=true)
+- `mineagentaefabricgametestentrypoint.aebindingbasedcontextreresolutionsucceedsuntilbindingbecomesstale` (ext-ae-fabric, batch=ae_smoke_binding_reresolution, runtime_status=passed, reported_in_xml=true)
 - `mineagentaefabricgametestentrypoint.aecputargetedunavailablecpubranch` (ext-ae-fabric, batch=ae_smoke_cpu, runtime_status=passed, reported_in_xml=true)
+- `mineagentaefabricgametestentrypoint.aeterminalremovalinvalidatesmenucontextandclearsjobs` (ext-ae-fabric, batch=ae_smoke_terminal_removal, runtime_status=passed, reported_in_xml=true)
+- `mineagentaefabricgametestentrypoint.aecancelandclearstayterminallocalaftersubmittedrequest` (ext-ae-fabric, batch=ae_smoke_cancel_clear_isolation, runtime_status=passed, reported_in_xml=true)
 
 ## Fabric XML reported testcases
 - `mineagentfabricgametestentrypoint.commandmenuopencloselifecyclecleanup` (base-fabric, status=passed, time=0.254s)
@@ -42,11 +46,15 @@
 - `mineagentfabricgametestentrypoint.baseproposalbindingunavailable` (base-fabric, status=passed, time=0.045s)
 - `mineagentfabricgametestentrypoint.baseindexinggaterecovery` (base-fabric, status=passed, time=0.099s)
 - `mineagentfabricgametestentrypoint.baseserverthreadconfinement` (base-fabric, status=passed, time=0.107s)
-- `mineagentaefabricgametestentrypoint.aecputargetedunavailablecpubranch` (ext-ae-fabric, status=passed, time=0.177s)
-- `mineagentaefabricgametestentrypoint.aeterminalteardownclearslivejobs` (ext-ae-fabric, status=passed, time=0.024s)
-- `mineagentaefabricgametestentrypoint.craftlifecycleisolation` (ext-ae-fabric, status=passed, time=0.026s)
-- `mineagentaefabricgametestentrypoint.aebindinginvalidationafterterminalremovalorwrongside` (ext-ae-fabric, status=passed, time=0.023s)
-- `mineagentaefabricgametestentrypoint.aeboundterminalapprovalsuccesshandoff` (ext-ae-fabric, status=passed, time=0.041s)
+- `mineagentaefabricgametestentrypoint.aeboundterminalapprovalfailswhenaebindingunavailable` (ext-ae-fabric, status=passed, time=0.167s)
+- `mineagentaefabricgametestentrypoint.aecputargetedunavailablecpubranch` (ext-ae-fabric, status=passed, time=0.05s)
+- `mineagentaefabricgametestentrypoint.aecancelandclearstayterminallocalaftersubmittedrequest` (ext-ae-fabric, status=passed, time=0.022s)
+- `mineagentaefabricgametestentrypoint.aebindingbasedcontextreresolutionsucceedsuntilbindingbecomesstale` (ext-ae-fabric, status=passed, time=0.028s)
+- `mineagentaefabricgametestentrypoint.aeterminalteardownclearslivejobs` (ext-ae-fabric, status=passed, time=0.015s)
+- `mineagentaefabricgametestentrypoint.craftlifecycleisolation` (ext-ae-fabric, status=passed, time=0.019s)
+- `mineagentaefabricgametestentrypoint.aeterminalremovalinvalidatesmenucontextandclearsjobs` (ext-ae-fabric, status=passed, time=0.016s)
+- `mineagentaefabricgametestentrypoint.aebindinginvalidationafterterminalremovalorwrongside` (ext-ae-fabric, status=passed, time=0.033s)
+- `mineagentaefabricgametestentrypoint.aeboundterminalapprovalsuccesshandoff` (ext-ae-fabric, status=passed, time=0.036s)
 
 ## Expected Forge scenario set
 - `AgentSystemReliabilityGameTest::agentSystemReliability` (base-forge, batch=mineagent_agent_runtime)
@@ -64,9 +72,13 @@
 - `ToolArgsBoundaryEndToEndGameTest::toolArgsBoundaryEndToEnd_65535_65536_65537_withUtfCorpus` (base-forge, batch=mineagent)
 - `ViewerChurnConsistencyGameTest::multiViewerSnapshotConsistencyUnderChurn` (base-forge, batch=mineagent_task8_viewer)
 - `AeBindingInvalidationGameTest::aeBindingInvalidationAfterTerminalRemovalOrWrongSide` (ext-ae-forge, batch=mineagentae)
+- `AeBindingReresolutionGameTest::aeBindingBasedContextReresolutionSucceedsUntilBindingBecomesStale` (ext-ae-forge, batch=mineagentae)
+- `AeBoundTerminalApprovalBindingUnavailableGameTest::aeBoundTerminalApprovalFailsWhenAeBindingUnavailable` (ext-ae-forge, batch=mineagentae)
 - `AeBoundTerminalApprovalSuccessGameTest::aeBoundTerminalApprovalSuccessHandoff` (ext-ae-forge, batch=mineagentae)
+- `AeCancelClearIsolationGameTest::aeCancelAndClearStayTerminalLocalAfterSubmittedRequest` (ext-ae-forge, batch=mineagentae)
 - `AeCpuUnavailableGameTest::aeCpuTargetedUnavailableCpuBranch` (ext-ae-forge, batch=mineagentae)
 - `AeCraftLifecycleIsolationGameTest::craftLifecycleIsolation_beginSuccessFailure_withoutCrossTerminalLeakage` (ext-ae-forge, batch=mineagentae)
+- `AeTerminalRemovalInvalidationGameTest::aeTerminalRemovalInvalidatesMenuContextAndClearsJobs` (ext-ae-forge, batch=mineagentae)
 - `AeTerminalTeardownLiveJobsGameTest::aeTerminalTeardownClearsLiveJobs` (ext-ae-forge, batch=mineagentae)
 
 ## Category: matched
@@ -86,9 +98,13 @@
 - `AgentSystemReliabilityGameTest::agentSystemReliability` <- `mineagentfabricgametestentrypoint.baseagentsystemreliability` (wrapper `MineAgentFabricGameTestEntrypoint::baseAgentSystemReliability`, status=passed, similarity=0.75)
 - `AeCraftLifecycleIsolationGameTest::craftLifecycleIsolation_beginSuccessFailure_withoutCrossTerminalLeakage` <- `mineagentaefabricgametestentrypoint.craftlifecycleisolation` (wrapper `MineAgentAeFabricGameTestEntrypoint::craftLifecycleIsolation`, status=passed, similarity=0.3)
 - `AeBoundTerminalApprovalSuccessGameTest::aeBoundTerminalApprovalSuccessHandoff` <- `mineagentaefabricgametestentrypoint.aeboundterminalapprovalsuccesshandoff` (wrapper `MineAgentAeFabricGameTestEntrypoint::aeBoundTerminalApprovalSuccessHandoff`, status=passed, similarity=1.0)
+- `AeBoundTerminalApprovalBindingUnavailableGameTest::aeBoundTerminalApprovalFailsWhenAeBindingUnavailable` <- `mineagentaefabricgametestentrypoint.aeboundterminalapprovalfailswhenaebindingunavailable` (wrapper `MineAgentAeFabricGameTestEntrypoint::aeBoundTerminalApprovalFailsWhenAeBindingUnavailable`, status=passed, similarity=1.0)
 - `AeTerminalTeardownLiveJobsGameTest::aeTerminalTeardownClearsLiveJobs` <- `mineagentaefabricgametestentrypoint.aeterminalteardownclearslivejobs` (wrapper `MineAgentAeFabricGameTestEntrypoint::aeTerminalTeardownClearsLiveJobs`, status=passed, similarity=1.0)
 - `AeBindingInvalidationGameTest::aeBindingInvalidationAfterTerminalRemovalOrWrongSide` <- `mineagentaefabricgametestentrypoint.aebindinginvalidationafterterminalremovalorwrongside` (wrapper `MineAgentAeFabricGameTestEntrypoint::aeBindingInvalidationAfterTerminalRemovalOrWrongSide`, status=passed, similarity=1.0)
+- `AeBindingReresolutionGameTest::aeBindingBasedContextReresolutionSucceedsUntilBindingBecomesStale` <- `mineagentaefabricgametestentrypoint.aebindingbasedcontextreresolutionsucceedsuntilbindingbecomesstale` (wrapper `MineAgentAeFabricGameTestEntrypoint::aeBindingBasedContextReresolutionSucceedsUntilBindingBecomesStale`, status=passed, similarity=1.0)
 - `AeCpuUnavailableGameTest::aeCpuTargetedUnavailableCpuBranch` <- `mineagentaefabricgametestentrypoint.aecputargetedunavailablecpubranch` (wrapper `MineAgentAeFabricGameTestEntrypoint::aeCpuTargetedUnavailableCpuBranch`, status=passed, similarity=1.0)
+- `AeTerminalRemovalInvalidationGameTest::aeTerminalRemovalInvalidatesMenuContextAndClearsJobs` <- `mineagentaefabricgametestentrypoint.aeterminalremovalinvalidatesmenucontextandclearsjobs` (wrapper `MineAgentAeFabricGameTestEntrypoint::aeTerminalRemovalInvalidatesMenuContextAndClearsJobs`, status=passed, similarity=1.0)
+- `AeCancelClearIsolationGameTest::aeCancelAndClearStayTerminalLocalAfterSubmittedRequest` <- `mineagentaefabricgametestentrypoint.aecancelandclearstayterminallocalaftersubmittedrequest` (wrapper `MineAgentAeFabricGameTestEntrypoint::aeCancelAndClearStayTerminalLocalAfterSubmittedRequest`, status=passed, similarity=1.0)
 
 ## Category: missing
 

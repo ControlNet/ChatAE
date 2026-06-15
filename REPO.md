@@ -828,7 +828,7 @@ The following recent commits were not yet reflected in this document and are now
 
 ---
 
-## 16) Test Strategy Notes (synced on 2026-03-31)
+## 16) Test Strategy Notes (synced on 2026-04-23)
 
 ### 16.1 Layered pyramid, current implemented state
 1. **Unit JUnit (core-first):**
@@ -841,7 +841,8 @@ The following recent commits were not yet reflected in this document and are now
    - Harness is active on both loaders.
    - Shared whole-agent reliability scenarios now live in `base/common-1.20.1` and run through thin Fabric/Forge adapters.
    - Shared cross-loader GameTest scenarios in `base/common-1.20.1` now cover the reload-command smoke path, delete-last-active-session fallback creation, real-host menu validity, session-visibility/session-list update no-op handling, base task6 proposal-binding-unavailable, task7 indexing-gate recovery, task8 viewer churn consistency, task9 server-thread confinement plus timeout/failure contracts, and task10 tool-args boundary, while loader modules stay thin wrappers or entrypoint adapters.
-   - Shared cross-loader GameTest scenarios in `ext-ae/common-1.20.1` now cover bound-terminal approval success handoff, craft lifecycle isolation, terminal teardown live-job cleanup, binding invalidation after removal / wrong-side lookup miss, and the CPU-targeted unavailable-CPU branch, while the deterministic no-binding approval failure remains covered by common-module JUnit.
+   - Shared cross-loader GameTest scenarios in `ext-ae/common-1.20.1` now cover nine loader-visible AE runtime scenarios: craft lifecycle isolation, bound-terminal approval success handoff, bound-terminal approval failure when the AE binding is unavailable, terminal teardown live-job cleanup, binding invalidation after terminal removal or wrong-side lookup, binding-based context re-resolution until the binding becomes stale, CPU-targeted unavailable-CPU handling, terminal removal invalidating menu context while clearing jobs, and cancel/clear isolation staying terminal-local after a submitted request.
+   - The ext-AE loader rule stays thin by design: Fabric entrypoints and Forge GameTest classes delegate into the shared common scenarios, with loader-specific code limited to entrypoint wiring, player creation, and runtime lease/bootstrap glue.
    - Fabric and Forge base runtime paths are both green in this workspace, including the shared agent reliability scenario.
 
 ### 16.2 Canonical execution commands
@@ -865,11 +866,13 @@ timeout 25m ./gradlew --no-daemon --configure-on-demand :ext-ae:fabric-1.20.1:ru
 timeout 25m ./gradlew --no-daemon --configure-on-demand :base:fabric-1.20.1:runGametest --stacktrace -Dfabric-api.gametest.filter=baseAgentSystemReliability
 ```
 
-**Forge GameTest commands (dev-lane path):**
+**Forge GameTest commands (canonical local verification):**
 ```bash
 timeout 25m ./gradlew --no-daemon --configure-on-demand :base:forge-1.20.1:runGameTestServer --stacktrace
 timeout 25m ./gradlew --no-daemon --configure-on-demand :ext-ae:forge-1.20.1:runGameTestServer --stacktrace
 ```
+
+- CI lane mapping for those commands is intentionally split: dev runs only `:base:forge-1.20.1:runGameTestServer`, while nightly additionally runs `:ext-ae:forge-1.20.1:runGameTestServer` as a rollout-only AE check.
 
 **Shared UI preview capture commands (common fixtures, both loaders):**
 ```bash
@@ -898,6 +901,8 @@ python3 scripts/capture_status_ui.py --loader forge --scenario all --display :1
   - `base/fabric-1.20.1/build/reports/gametest/runGametest.xml`
   - `ext-ae/fabric-1.20.1/build/reports/gametest/runGametest.xml`
 - Forge runtime log (dev lane): `ci-reports/dev/forge-gametest.log`
+- Forge nightly AE runtime log: `ci-reports/nightly/ext-ae-forge-gametest.log`
+- Forge nightly AE XML reports: `ext-ae/forge-1.20.1/build/reports/**/*.xml`
 - CI summaries:
   - `ci-reports/pr/*-summary.json`
 - `ci-reports/dev/summary.json`
@@ -906,19 +911,21 @@ python3 scripts/capture_status_ui.py --loader forge --scenario all --display :1
 - Shared UI preview capture PNGs: `artifacts/ui-captures/<loader>/<scenario>.png`
 - Evidence archive: `.sisyphus/evidence/*`
 
-### 16.4 Cross-loader runtime status (updated 2026-04-02)
+### 16.4 Cross-loader runtime status (updated 2026-04-23)
 - **Shared agent reliability coverage:** base runtime now includes a shared cross-loader reliability scenario that exercises the real chat packet → session transition → agent loop → tool execution / failure path.
- - **Shared scenario coverage:** common code now owns the base command-menu lifecycle cleanup, reload-command smoke path, deleted-session queued-append lifecycle, delete-last-active-session fallback, real-host menu validity, session-visibility/delete/rebind lifecycle, session-list update / TEAM no-op handling, proposal-binding-unavailable, indexing-gate recovery, viewer churn consistency, server-thread confinement, timeout/failure contract, tool-args boundary, and agent-reliability scenarios, plus the ext-AE craft-lifecycle isolation, bound-terminal approval success handoff, terminal teardown live-job cleanup, binding invalidation, and unavailable-CPU runtime branches. The deterministic bound-terminal no-binding failure path is covered by `NetworkProposalLifecycleBehaviorTest.task7_approvalDecisionBehavior_approveWithoutBindingFailsDeterministically()` instead of the loader runtime lane.
+- **Shared scenario coverage:** common code now owns the base command-menu lifecycle cleanup, reload-command smoke path, deleted-session queued-append lifecycle, delete-last-active-session fallback, real-host menu validity, session-visibility/delete/rebind lifecycle, session-list update / TEAM no-op handling, proposal-binding-unavailable, indexing-gate recovery, viewer churn consistency, server-thread confinement, timeout/failure contract, tool-args boundary, and agent-reliability scenarios, plus the ext-AE nine-scenario shared runtime surface: craft-lifecycle isolation, bound-terminal approval success handoff, bound-terminal approval failure when AE binding is unavailable, terminal teardown live-job cleanup, binding invalidation, binding re-resolution until stale, unavailable-CPU handling, terminal-removal invalidation with job clearing, and terminal-local cancel/clear isolation.
 - **Loader adapters:** Fabric runtime methods and Forge GameTest classes are thin wrappers over the shared common scenarios, with loader-specific work limited to player creation and entrypoint wiring.
 - **Current workspace status:** both base Fabric and base Forge GameTest runs pass in this workspace, and the previous Forge runtime blocker no longer applies to the current branch state.
-- **Ext-AE Fabric isolation:** the ext-AE Fabric nightly/parity lane now keeps the base mod loaded for runtime dependencies but strips the base `fabric-gametest` entrypoint from the ext-AE local runtime artifact, so `:ext-ae:fabric-1.20.1:runGametest -Dfabric-api.gametest.filter=ae_smoke` discovers only the five AE smoke GameTests while the base Fabric lane remains the source of base runtime coverage.
+- **Ext-AE Fabric isolation:** the ext-AE Fabric nightly/parity lane keeps the base mod loaded for runtime dependencies but strips the base `fabric-gametest` entrypoint from the ext-AE local runtime artifact, so `:ext-ae:fabric-1.20.1:runGametest -Dfabric-api.gametest.filter=ae_smoke` discovers only the AE smoke wrapper surface while the base Fabric lane remains the source of base runtime coverage.
 - **Current workspace verification:** `:base:fabric-1.20.1:runGametest`, `:ext-ae:fabric-1.20.1:runGametest -Dfabric-api.gametest.filter=ae_smoke`, `:base:forge-1.20.1:runGameTestServer`, and `:ext-ae:forge-1.20.1:runGameTestServer` all pass in this workspace.
+- **Nightly rollout policy:** AE Forge GameTests are introduced in nightly first. PR and dev lane scope stays unchanged, and any promotion of AE Forge runtime coverage beyond nightly is deferred pending stability.
 - **Parity evidence note:** the checked-in parity report now treats Fabric wrapper registration plus successful lane runs as the authoritative testcase inventory. Fabric's `runGametest.xml` remains a collected artifact, but it does not reliably enumerate every passing registered testcase in this workspace, so the XML is used as supplemental per-test status rather than the sole inventory source.
 
 ### 16.5 CI lane mapping
 - **PR lane:** JUnit matrix only (`:base:core:test`, `:base:common-1.20.1:test`, `:ext-ae:core:test`, `:ext-ae:common-1.20.1:test`) with per-module JaCoCo artifacts.
 - **Dev lane:** single `jacocoUnitTestReport` invocation (which runs the covered JUnit suite once and emits aggregate/per-module coverage) + Forge `:base:forge-1.20.1:runGameTestServer` with blocker-aware policy parsing.
-- **Nightly lane:** single `jacocoUnitTestReport` invocation (which runs the covered JUnit suite once and emits aggregate/per-module coverage) + Fabric `:base:fabric-1.20.1:runGametest` and `:ext-ae:fabric-1.20.1:runGametest -Dfabric-api.gametest.filter=ae_smoke`.
+- **Nightly lane:** single `jacocoUnitTestReport` invocation (which runs the covered JUnit suite once and emits aggregate/per-module coverage) + Fabric `:base:fabric-1.20.1:runGametest` and `:ext-ae:fabric-1.20.1:runGametest -Dfabric-api.gametest.filter=ae_smoke`, plus AE Forge `:ext-ae:forge-1.20.1:runGameTestServer` with nightly log/XML collection.
+- **Rollout guardrail:** AE Forge runtime coverage remains nightly-only for now. PR and dev do not run that ext-AE Forge step, and promotion beyond nightly is deferred pending stability.
 - **Policy parser naming note:** the workflow-visible lane is `dev`, but the policy parser still uses the internal lane key `main` when collecting/enforcing the dev-lane summary.
 
 ### 16.6 JUnit coverage signal (updated 2026-03-31)

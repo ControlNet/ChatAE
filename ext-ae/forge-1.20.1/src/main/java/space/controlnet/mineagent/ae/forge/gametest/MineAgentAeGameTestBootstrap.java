@@ -12,9 +12,13 @@ public final class MineAgentAeGameTestBootstrap {
     private static final List<Class<?>> GAME_TEST_CLASSES = List.of(
             AeCraftLifecycleIsolationGameTest.class,
             AeBoundTerminalApprovalSuccessGameTest.class,
+            AeBoundTerminalApprovalBindingUnavailableGameTest.class,
             AeTerminalTeardownLiveJobsGameTest.class,
             AeBindingInvalidationGameTest.class,
-            AeCpuUnavailableGameTest.class
+            AeBindingReresolutionGameTest.class,
+            AeCpuUnavailableGameTest.class,
+            AeTerminalRemovalInvalidationGameTest.class,
+            AeCancelClearIsolationGameTest.class
     );
 
     private MineAgentAeGameTestBootstrap() {

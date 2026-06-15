@@ -15,94 +15,150 @@ import space.controlnet.mineagent.common.terminal.TerminalContextResolver;
 import space.controlnet.mineagent.core.session.TerminalBinding;
 import space.controlnet.mineagent.ae.core.terminal.AiTerminalData;
 import space.controlnet.mineagent.ae.core.terminal.AeTerminalContext;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
+import java.util.function.Function;
 
 public final class AeTerminalContextResolver implements TerminalContextResolver {
     @Override
     public Optional<space.controlnet.mineagent.core.terminal.TerminalContext> fromPlayer(ServerPlayer player) {
-        if (player == null) {
-            return Optional.empty();
-        }
-        if (!(player.containerMenu instanceof AiTerminalMenu menu)) {
-            return Optional.empty();
-        }
-        Optional<space.controlnet.mineagent.common.terminal.TerminalHost> host = menu.getHost();
-        if (host.isEmpty()) {
-            return Optional.empty();
-        }
-        if (!(host.get() instanceof AeTerminalHost terminal)) {
-            return Optional.empty();
-        }
-        if (terminal.isRemovedHost()) {
-            return Optional.empty();
-        }
-        return Optional.of(new PlayerTerminalContext(player, terminal));
+        return fromPlayerMenuState(
+                createMenuState(player),
+                terminal -> new PlayerTerminalContext(player, requireTerminal(terminal))
+        );
     }
 
     @Override
     public Optional<space.controlnet.mineagent.core.terminal.TerminalContext> fromPlayerAtBinding(ServerPlayer player, TerminalBinding binding) {
-        if (player == null || binding == null) {
-            return Optional.empty();
-        }
-        if (player.getServer() == null) {
-            return Optional.empty();
-        }
-
-        ResourceLocation id;
-        try {
-            id = new ResourceLocation(binding.dimensionId());
-        } catch (Exception ignored) {
-            return Optional.empty();
-        }
-
-        ResourceKey<net.minecraft.world.level.Level> dimensionKey = ResourceKey.create(Registries.DIMENSION, id);
-        ServerLevel level = player.getServer().getLevel(dimensionKey);
-        if (level == null) {
-            return Optional.empty();
-        }
-
-        BlockPos pos = new BlockPos(binding.x(), binding.y(), binding.z());
-        BlockEntity be = level.getBlockEntity(pos);
-        if (be == null) {
-            return Optional.empty();
-        }
-
-        Optional<AeTerminalHost> terminal = resolveHostFromBinding(be, binding);
-        if (terminal.isEmpty()) {
-            return Optional.empty();
-        }
-        if (terminal.get().isRemovedHost()) {
-            return Optional.empty();
-        }
-        return Optional.of(new PlayerTerminalContext(player, terminal.get()));
+        return fromPlayerBindingLookup(
+                createBindingLookup(player),
+                binding,
+                terminal -> new PlayerTerminalContext(player, requireTerminal(terminal))
+        );
     }
 
-    private static Optional<AeTerminalHost> resolveHostFromBinding(BlockEntity be, TerminalBinding binding) {
-        if (be instanceof AeTerminalHost host && binding.side().isEmpty()) {
-            return Optional.of(host);
+    static <T> Optional<T> fromPlayerMenuState(
+            @Nullable AeTerminalContextResolution.MenuState state,
+            Function<AeTerminalContextResolution.TerminalLike, T> contextFactory
+    ) {
+        return AeTerminalContextResolution.fromMenuState(state, contextFactory);
+    }
+
+    static <T> Optional<T> fromPlayerBindingLookup(
+            @Nullable AeTerminalContextResolution.BindingLookupLike lookup,
+            @Nullable TerminalBinding binding,
+            Function<AeTerminalContextResolution.TerminalLike, T> contextFactory
+    ) {
+        return AeTerminalContextResolution.fromBindingLookup(lookup, binding, contextFactory);
+    }
+
+    private static AeTerminalContextResolution.MenuState createMenuState(ServerPlayer player) {
+        if (player == null) {
+            return null;
+        }
+        if (!(player.containerMenu instanceof AiTerminalMenu menu)) {
+            return new AeTerminalContextResolution.MenuState(false, Optional.empty());
+        }
+        return new AeTerminalContextResolution.MenuState(true, menu.getHost().map(AeTerminalContextResolver::adaptMenuHost));
+    }
+
+    private static AeTerminalContextResolution.BindingLookupLike createBindingLookup(ServerPlayer player) {
+        if (player == null || player.getServer() == null) {
+            return null;
+        }
+        return new ServerBindingLookup(player.getServer());
+    }
+
+    private static Object adaptMenuHost(Object host) {
+        if (host instanceof AeTerminalHost terminal) {
+            return new TerminalAdapter(terminal);
+        }
+        return host;
+    }
+
+    private static Object adaptBindingTarget(BlockEntity blockEntity) {
+        if (blockEntity instanceof AeTerminalHost terminal && blockEntity instanceof IPartHost partHost) {
+            return new TerminalPartHostAdapter(terminal, partHost);
+        }
+        if (blockEntity instanceof AeTerminalHost terminal) {
+            return new TerminalAdapter(terminal);
+        }
+        if (blockEntity instanceof IPartHost partHost) {
+            return new PartHostAdapter(partHost);
+        }
+        return blockEntity;
+    }
+
+    private static Object adaptPart(IPart part) {
+        if (part instanceof AeTerminalHost terminal) {
+            return new TerminalAdapter(terminal);
+        }
+        return part;
+    }
+
+    private static AeTerminalHost requireTerminal(AeTerminalContextResolution.TerminalLike terminal) {
+        if (terminal instanceof TerminalAdapter adapter) {
+            return adapter.terminal();
+        }
+        if (terminal instanceof TerminalPartHostAdapter adapter) {
+            return adapter.terminal();
+        }
+        throw new IllegalStateException("Unexpected terminal adapter: " + terminal.getClass().getName());
+    }
+
+    private record TerminalAdapter(AeTerminalHost terminal) implements AeTerminalContextResolution.TerminalLike {
+        @Override
+        public boolean isRemovedHost() {
+            return terminal.isRemovedHost();
+        }
+    }
+
+    private record PartHostAdapter(IPartHost partHost) implements AeTerminalContextResolution.PartHostLike {
+        @Override
+        public Object getPart(String sideName) {
+            return adaptPart(partHost.getPart(Direction.valueOf(sideName)));
+        }
+    }
+
+    private record TerminalPartHostAdapter(AeTerminalHost terminal, IPartHost partHost)
+            implements AeTerminalContextResolution.TerminalLike, AeTerminalContextResolution.PartHostLike {
+        @Override
+        public boolean isRemovedHost() {
+            return terminal.isRemovedHost();
         }
 
-        if (!(be instanceof IPartHost partHost)) {
-            return Optional.empty();
+        @Override
+        public Object getPart(String sideName) {
+            return adaptPart(partHost.getPart(Direction.valueOf(sideName)));
+        }
+    }
+
+    private record ServerBindingLookup(net.minecraft.server.MinecraftServer server)
+            implements AeTerminalContextResolution.BindingLookupLike {
+        @Override
+        public boolean hasDimension(String dimensionId) {
+            return resolveLevel(dimensionId) != null;
         }
 
-        if (binding.side().isEmpty()) {
-            return Optional.empty();
+        @Override
+        public Object getBlockEntity(String dimensionId, int x, int y, int z) {
+            ServerLevel level = resolveLevel(dimensionId);
+            if (level == null) {
+                return null;
+            }
+            BlockEntity blockEntity = level.getBlockEntity(new BlockPos(x, y, z));
+            if (blockEntity == null) {
+                return null;
+            }
+            return adaptBindingTarget(blockEntity);
         }
 
-        Direction side;
-        try {
-            side = Direction.valueOf(binding.side().get());
-        } catch (IllegalArgumentException ignored) {
-            return Optional.empty();
+        private ServerLevel resolveLevel(String dimensionId) {
+            ResourceLocation id = new ResourceLocation(dimensionId);
+            ResourceKey<net.minecraft.world.level.Level> dimensionKey = ResourceKey.create(Registries.DIMENSION, id);
+            return server.getLevel(dimensionKey);
         }
-
-        IPart part = partHost.getPart(side);
-        if (part instanceof AeTerminalHost host) {
-            return Optional.of(host);
-        }
-        return Optional.empty();
     }
 
     private static final class PlayerTerminalContext implements AeTerminalContext {

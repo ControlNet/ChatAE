@@ -61,3 +61,8 @@ Initial note file for architectural and implementation decisions.
 ## 2026-04-23T06:00:00Z Task 14: nightly-only Forge AE rollout
 - Decision: keep the new Forge AE runtime step confined to the nightly lane and wire it into the existing nightly collector instead of introducing any PR/dev exposure or separate summary path.
 - Decision: treat the Forge AE runtime log and XML reports as nightly artifacts alongside the current Fabric outputs, using the existing collector contract so nightly failure handling stays explicit and unchanged in spirit.
+
+## 2026-04-23T00:00:00Z Task 15: runtime-doc sync decisions
+- Decision: document the ext-AE shared runtime surface as nine loader-visible scenarios by name in `REPO.md`, instead of leaving the older shorter summary that no longer covered Tasks 11, 12, and 13.
+- Decision: keep the rollout wording strict and non-promissory, AE Forge GameTests are nightly-only today, PR/dev remain unchanged, and promotion beyond nightly is deferred pending stability.
+- Decision: keep the parity snapshot honest about evidence quality by expanding the shared AE inventory now, but marking newer Fabric wrappers as `xml_missing` until checked-in XML evidence catches up.

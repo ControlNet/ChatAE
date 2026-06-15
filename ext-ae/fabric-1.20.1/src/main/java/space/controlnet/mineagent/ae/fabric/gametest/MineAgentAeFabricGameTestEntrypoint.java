@@ -41,6 +41,20 @@ public final class MineAgentAeFabricGameTestEntrypoint {
                 () -> MineAgentAeFabricRuntimeGameTests.boundTerminalApprovalSuccessHandoff(helper));
     }
 
+    @GameTest(template = FabricGameTest.EMPTY_STRUCTURE, batch = "ae_smoke_binding_unavailable", timeoutTicks = 2400)
+    public static void aeBoundTerminalApprovalFailsWhenAeBindingUnavailable(GameTestHelper helper) {
+        if (skipWhenFiltered(helper, "ae_smoke_binding_unavailable", "aeBoundTerminalApprovalFailsWhenAeBindingUnavailable")) {
+            return;
+        }
+        if (!isAeRuntimeAvailable()) {
+            helper.fail("ae_runtime_missing -> Applied Energistics 2 runtime is required; test blocked");
+            return;
+        }
+
+        GameTestRuntimeLease.runWhenAvailable(helper,
+                () -> MineAgentAeFabricRuntimeGameTests.boundTerminalApprovalFailsWhenAeBindingUnavailable(helper));
+    }
+
     @GameTest(template = FabricGameTest.EMPTY_STRUCTURE, batch = "ae_smoke_teardown", timeoutTicks = 2400)
     public static void aeTerminalTeardownClearsLiveJobs(GameTestHelper helper) {
         if (skipWhenFiltered(helper, "ae_smoke_teardown", "aeTerminalTeardownClearsLiveJobs")) {
@@ -69,6 +83,20 @@ public final class MineAgentAeFabricGameTestEntrypoint {
                 () -> MineAgentAeFabricRuntimeGameTests.bindingInvalidationAfterTerminalRemovalOrWrongSide(helper));
     }
 
+    @GameTest(template = FabricGameTest.EMPTY_STRUCTURE, batch = "ae_smoke_binding_reresolution", timeoutTicks = 2400)
+    public static void aeBindingBasedContextReresolutionSucceedsUntilBindingBecomesStale(GameTestHelper helper) {
+        if (skipWhenFiltered(helper, "ae_smoke_binding_reresolution", "aeBindingBasedContextReresolutionSucceedsUntilBindingBecomesStale")) {
+            return;
+        }
+        if (!isAeRuntimeAvailable()) {
+            helper.fail("ae_runtime_missing -> Applied Energistics 2 runtime is required; test blocked");
+            return;
+        }
+
+        GameTestRuntimeLease.runWhenAvailable(helper,
+                () -> MineAgentAeFabricRuntimeGameTests.bindingBasedContextReresolutionSucceedsUntilBindingBecomesStale(helper));
+    }
+
     @GameTest(template = FabricGameTest.EMPTY_STRUCTURE, batch = "ae_smoke_cpu", timeoutTicks = 2400)
     public static void aeCpuTargetedUnavailableCpuBranch(GameTestHelper helper) {
         if (skipWhenFiltered(helper, "ae_smoke_cpu", "aeCpuTargetedUnavailableCpuBranch")) {
@@ -81,6 +109,38 @@ public final class MineAgentAeFabricGameTestEntrypoint {
 
         GameTestRuntimeLease.runWhenAvailable(helper,
                 () -> MineAgentAeFabricRuntimeGameTests.cpuTargetedUnavailableCpuBranch(helper));
+    }
+
+    @GameTest(template = FabricGameTest.EMPTY_STRUCTURE, batch = "ae_smoke_terminal_removal", timeoutTicks = 2400)
+    public static void aeTerminalRemovalInvalidatesMenuContextAndClearsJobs(GameTestHelper helper) {
+        if (skipWhenFiltered(helper, "ae_smoke_terminal_removal", "aeTerminalRemovalInvalidatesMenuContextAndClearsJobs")) {
+            return;
+        }
+        if (!isAeRuntimeAvailable()) {
+            helper.fail("ae_runtime_missing -> Applied Energistics 2 runtime is required; test blocked");
+            return;
+        }
+
+        GameTestRuntimeLease.runWhenAvailable(helper,
+                () -> MineAgentAeFabricRuntimeGameTests.terminalRemovalInvalidatesMenuContextAndClearsJobs(helper));
+    }
+
+    @GameTest(template = FabricGameTest.EMPTY_STRUCTURE, batch = "ae_smoke_cancel_clear_isolation", timeoutTicks = 2400)
+    public static void aeCancelAndClearStayTerminalLocalAfterSubmittedRequest(GameTestHelper helper) {
+        if (skipWhenFiltered(
+                helper,
+                "ae_smoke_cancel_clear_isolation",
+                "aeCancelAndClearStayTerminalLocalAfterSubmittedRequest"
+        )) {
+            return;
+        }
+        if (!isAeRuntimeAvailable()) {
+            helper.fail("ae_runtime_missing -> Applied Energistics 2 runtime is required; test blocked");
+            return;
+        }
+
+        GameTestRuntimeLease.runWhenAvailable(helper,
+                () -> MineAgentAeFabricRuntimeGameTests.cancelAndClearStayTerminalLocalAfterSubmittedRequest(helper));
     }
 
     private static boolean isAeRuntimeAvailable() {
